@@ -1,0 +1,4 @@
+instance/
+secret.txt
+static/files/
+.env
