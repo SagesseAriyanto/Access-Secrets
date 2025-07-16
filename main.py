@@ -18,11 +18,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 class Base(DeclarativeBase):
     pass
 
-# Set up the current directory path
-basedir = os.path.abspath(os.path.dirname(__file__))
-# Define the instance path for the SQLite database
-instance_path = os.path.join(basedir, 'instance')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(instance_path, "users.db")}'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///instance/users.db'
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
