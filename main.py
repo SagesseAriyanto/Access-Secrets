@@ -11,11 +11,12 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = "dafadgadgadf"
 
 # CREATE DATABASE
-
-
 class Base(DeclarativeBase):
     pass
 
+# Ensure instance directory exists for database
+instance_dir = os.path.join(os.path.dirname(__file__), 'instance')
+os.makedirs(instance_dir, exist_ok=True)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///instance/users.db'
 db = SQLAlchemy(model_class=Base)
