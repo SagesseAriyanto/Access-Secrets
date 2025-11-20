@@ -1,0 +1,39 @@
+SQLite vs PostgreSQL: What You Need to Know
+===========================================
+
+SQLite
+------
+- SQLite is a file-based database. All your data is stored in a single file (e.g., instance/users.db).
+- Strength: Easy to set up, great for development and debugging. You can open the file with a DB viewer and inspect your data.
+- Weakness: Not suitable for production hosting. On platforms like Heroku or Render, the file location can change or be wiped every 24 hours, causing data loss.
+- Use SQLite for local development and testing only.
+
+PostgreSQL
+----------
+- PostgreSQL is a powerful, server-based relational database. It can handle millions of records and is reliable for production use.
+- Data is stored on a managed server, not in a local file. This means your data is safe and persistent.
+- Most hosting providers (Heroku, Render, etc.) recommend PostgreSQL for production apps.
+
+Upgrading from SQLite to PostgreSQL
+-----------------------------------
+1. Create a new PostgreSQL database using your hosting provider's dashboard.
+2. Copy the Internal Database URL from the database info section.
+3. Set your SQLALCHEMY_DATABASE_URI environment variable to this URL in your web service settings.
+   - Example: postgresql://username:password@host:port/dbname
+   - Make sure the URI starts with 'postgresql' (not 'postgres').
+4. No code changes needed if you use SQLAlchemy—just update the URI.
+5. Install the 'psycopg' package (PostgreSQL adapter for Python) in your requirements.txt.
+
+Why SQLAlchemy Makes Switching Easy
+-----------------------------------
+- SQLAlchemy is an ORM (Object Relational Mapper) that abstracts away the database engine.
+- You can switch from SQLite to PostgreSQL by just changing the database URI—no need to rewrite your models or queries.
+
+Summary
+-------
+- Use SQLite for development, PostgreSQL for production.
+- Update your database URI and requirements.txt for deployment.
+- SQLAlchemy and psycopg make switching databases seamless.
+
+For more info, see:
+https://blog-deployment.onrender.com/

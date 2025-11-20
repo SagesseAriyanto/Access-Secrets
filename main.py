@@ -5,20 +5,25 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 import os
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Email, Length
+from flask_bootstrap import Bootstrap5
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "dafadgadgadf"
 
+# Intiialize Bootstrap
+bootstrap = Bootstrap5(app)
+
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
 
-# Ensure instance directory exists for database
-instance_dir = os.path.join(os.path.dirname(__file__), 'instance')
-os.makedirs(instance_dir, exist_ok=True)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///instance/users.db'
+base_dir = os.path.abspath(os.path.dirname(__file__))
+instance_path = os.path.join(base_dir, "instance")
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(instance_path, "users.db")}'
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
@@ -34,6 +39,12 @@ class User(UserMixin,db.Model):
     password: Mapped[str] = mapped_column(String(100))
     name: Mapped[str] = mapped_column(String(1000))
 
+class RegisterForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    name = StringField('Name', validators=[DataRequired()])
+    submit = SubmitField('Register')
+
 
 with app.app_context():
     db.create_all()
@@ -41,18 +52,21 @@ with app.app_context():
 
 @app.route('/')
 def home():
-    return render_template("index.html", logged_in=current_user.is_authenticated)
+    return render_template("index.html", status=current_user.is_authenticated)
 
 
 @app.route('/register', methods=["GET", "POST"])
 def register():
-    if request.method == "POST":
-        name = request.form.get("name")
-        email = request.form.get("email")
-        password = request.form.get("password")
+    form = RegisterForm()
+    if form.validate_on_submit():
+        name = form.name.data
+        email = form.email.data
+        password = form.password.data
 
         # Check if user already exists
-        existing_user = User.query.filter_by(email=email).first()
+        existing_user = db.session.execute(
+            db.select(User).where(User.email == email).scalar()
+        )
         if existing_user:
             flash("You have already signed up with that email. Please log in instead.")
             return redirect(url_for('login'))
@@ -61,12 +75,18 @@ def register():
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
         new_user = User(email=email, password=hashed_password, name=name)
         db.session.add(new_user)
-        db.session.commit()
-
-        # Log in the user immediately after registration
-        login_user(new_user)
-        return redirect(url_for('secrets'))
-    return render_template("register.html", logged_in=current_user.is_authenticated)
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            flash("An error occurred while creating your account. Please try again.")
+            return redirect(url_for("register"), form=form)
+        else:
+            flash("Registration successful! You are now logged in.")
+            login_user(new_user)
+            return redirect(url_for('secrets'))
+    return render_template(
+        "register.html", logged_in=current_user.is_authenticated, form=form)
 
 # Flask-Login requires a user_loader function to load a user from the database
 @login_manager.user_loader
@@ -85,7 +105,7 @@ def login():
             login_user(user)  # Log them in
             flash("Login successful!")
             return redirect(url_for('secrets'))
-        flash("Login failed. Please check your email and password.")
+        flash("Login failed. incorrect email or password.")
     return render_template("login.html", logged_in=current_user.is_authenticated)
 
 @app.route('/secrets')
@@ -118,4 +138,4 @@ if __name__ == "__main__":
     # Development server - NOT for production!
     # For production, use a WSGI server (like Gunicorn, uWSGI)
     # WSGI servers bridge Python Flask apps with web servers
-    app.run(debug=False)
+    app.run(debug=True)
